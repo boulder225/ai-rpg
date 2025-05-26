@@ -10,6 +10,7 @@ help:
 	@echo "  test      - Run tests"
 	@echo "  run       - Run the web server example"
 	@echo "  examples  - Run basic usage example"
+	@echo "  claude-example - Run Claude AI integration example"
 	@echo "  clean     - Clean build artifacts"
 	@echo "  docker    - Build Docker image"
 	@echo "  install   - Install dependencies"
@@ -46,6 +47,10 @@ run:
 examples:
 	@echo "Running basic usage example..."
 	go run examples/basic_usage.go
+
+claude-example:
+	@echo "Running Claude AI integration example..."
+	go run examples/claude_example.go
 
 fmt:
 	@echo "Formatting code..."

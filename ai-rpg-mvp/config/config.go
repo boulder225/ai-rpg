@@ -151,10 +151,10 @@ func LoadConfig() *Config {
 			MaxContextAge:   getEnvDuration("CONTEXT_MAX_AGE", 30*24*time.Hour), // 30 days
 		},
 		AI: AIConfig{
-			Provider:           getEnvString("AI_PROVIDER", "openai"),
+			Provider:           getEnvString("AI_PROVIDER", "claude"),
 			APIKey:             getEnvString("AI_API_KEY", ""),
-			Model:              getEnvString("AI_MODEL", "gpt-4"),
-			MaxTokens:          getEnvInt("AI_MAX_TOKENS", 2000),
+			Model:              getEnvString("AI_MODEL", "claude-3-sonnet-20240229"),
+			MaxTokens:          getEnvInt("AI_MAX_TOKENS", 1000),
 			Temperature:        getEnvFloat("AI_TEMPERATURE", 0.7),
 			Timeout:            getEnvDuration("AI_TIMEOUT", 30*time.Second),
 			MaxRetries:         getEnvInt("AI_MAX_RETRIES", 3),

@@ -33,10 +33,12 @@ ai-rpg-mvp/
 - **Memory Management**: Configurable limits to prevent memory bloat
 
 ### 🤖 AI Integration Ready
-- **Structured Prompts**: Generate contextual AI prompts with full game state
-- **Personality Analysis**: Determine player mood, play style, and preferences
-- **Relationship Context**: Provide NPC disposition and interaction history
-- **World Consistency**: Maintain coherent world state across AI interactions
+- **Claude AI Integration**: Contextual Game Master responses with personality consistency
+- **Structured Prompts**: Generate rich contextual AI prompts with full game state
+- **NPC Dialogue Generation**: Character-specific dialogue with personality traits
+- **Scene Descriptions**: Dynamic environmental descriptions based on context
+- **Caching & Rate Limiting**: Optimized AI API usage with intelligent caching
+- **Multiple Providers**: Pluggable AI provider system (Claude, OpenAI)
 
 ### 🎮 Game-Ready Architecture
 - **Concurrent Sessions**: Support multiple simultaneous players
@@ -69,13 +71,33 @@ contextMgr.UpdateNPCRelationship(sessionID, "tavern_keeper", "Marcus", 10,
 prompt, err := contextMgr.GenerateAIPrompt(sessionID)
 ```
 
-### 2. Web Server Example
+### 2. Claude AI Integration
 
 ```bash
-# Run the example web server
-go run examples/web_server.go
+# Set up your Claude API key
+cp .env.example .env
+# Edit .env and add your Claude API key:
+# AI_API_KEY=your_claude_api_key_here
 
-# Visit http://localhost:8080 for interactive demo
+# Run with Claude AI GM
+make run
+```
+
+The system will automatically generate contextual responses using Claude:
+
+```
+🎮 Player: /look around
+🤖 AI GM: You find yourself in the heart of Thornwick village, where cobblestone 
+paths wind between timber-framed houses. The evening air carries the scent of 
+woodsmoke and fresh bread from the nearby tavern, while merchants pack up their 
+stalls for the night. A hooded figure near the well quickly averts their gaze 
+when they notice you watching.
+
+🎮 Player: /talk to tavern keeper  
+🤖 AI GM: Marcus, the burly tavern keeper, looks up from polishing a pewter mug. 
+His weathered face creases into a cautious smile. "Welcome, traveler. I'm Marcus - 
+been keeping this place running for nigh on twenty years. What brings you to our 
+humble village?" His eyes briefly flick to your travel-worn gear with keen interest.
 ```
 
 ### 3. Database Setup (Production)
@@ -86,7 +108,45 @@ storage, err := context.NewPostgreSQLStorage("postgres://user:pass@localhost/rpg
 contextMgr := context.NewContextManager(storage)
 ```
 
-## Core Components
+## 🤖 AI Game Master Features
+
+### Claude Integration
+The system uses Claude's advanced language understanding for:
+
+**🎭 Game Master Responses**
+- Contextual storytelling based on player history
+- Consistent world-building and lore maintenance  
+- Dynamic difficulty adjustment based on player skill
+- Rich environmental descriptions with sensory details
+
+**👥 NPC Dialogue Generation**
+```go
+// Generate character-specific dialogue
+npcDialogue, err := aiService.GenerateNPCDialogue(
+    "Marcus the Tavern Keeper",
+    "Gruff but helpful, suspicious of strangers, loves local gossip",
+    "Player asks about strange noises from the old mine"
+)
+// Result: "Aye, been hearing those sounds myself. Started three nights back..."
+```
+
+**🌍 Scene Descriptions**
+```go
+// Generate atmospheric scene descriptions
+sceneDesc, err := aiService.GenerateSceneDescription(
+    "Ancient Elven Ruins",
+    "Player discovered hidden chamber after solving puzzle",
+    "Mysterious and awe-inspiring"
+)
+```
+
+**⚡ Performance Features**
+- **Intelligent Caching**: Reduce API calls with context-aware caching
+- **Rate Limiting**: Built-in rate limiting to prevent API overuse
+- **Retry Logic**: Automatic retry with exponential backoff
+- **Fallback Responses**: Graceful degradation if AI service is unavailable
+
+---
 
 ### Context Manager
 The central orchestrator that manages all player contexts, processes events, and maintains game state consistency.

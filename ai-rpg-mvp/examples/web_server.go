@@ -7,12 +7,16 @@ import (
 	"net/http"
 	"time"
 
+	"ai-rpg-mvp/ai"
+	"ai-rpg-mvp/config"
 	"ai-rpg-mvp/context"
 )
 
 // GameServer represents our RPG game server
 type GameServer struct {
 	contextMgr *context.ContextManager
+	aiService  *ai.AIService
+	config     *config.Config
 }
 
 // PlayerCommand represents a command from the player
@@ -33,14 +37,45 @@ type GameResponse struct {
 }
 
 func main() {
+	// Load configuration
+	cfg := config.LoadConfig()
+	
+	// Validate configuration
+	if err := cfg.Validate(); err != nil {
+		log.Fatalf("Invalid configuration: %v", err)
+	}
+
 	// Initialize context manager with in-memory storage
 	// In production, you would use PostgreSQL storage
 	storage := context.NewMemoryStorage()
 	contextMgr := context.NewContextManager(storage)
 	defer contextMgr.Shutdown()
 
+	// Initialize AI service
+	aiConfig := ai.AIConfig{
+		Provider:           cfg.AI.Provider,
+		APIKey:             cfg.AI.APIKey,
+		Model:              cfg.AI.Model,
+		MaxTokens:          cfg.AI.MaxTokens,
+		Temperature:        cfg.AI.Temperature,
+		Timeout:            cfg.AI.Timeout,
+		MaxRetries:         cfg.AI.MaxRetries,
+		RetryDelay:         cfg.AI.RetryDelay,
+		RateLimitRequests:  cfg.AI.RateLimitRequests,
+		RateLimitDuration:  cfg.AI.RateLimitDuration,
+		EnableCaching:      cfg.AI.EnableCaching,
+		CacheTTL:           cfg.AI.CacheTTL,
+	}
+
+	aiService, err := ai.NewAIService(aiConfig)
+	if err != nil {
+		log.Fatalf("Failed to initialize AI service: %v", err)
+	}
+
 	server := &GameServer{
 		contextMgr: contextMgr,
+		aiService:  aiService,
+		config:     cfg,
 	}
 
 	// Setup HTTP routes
@@ -53,15 +88,16 @@ func main() {
 	// Serve static files for a simple web interface
 	http.HandleFunc("/", server.handleIndex)
 
-	fmt.Println("Starting game server on http://localhost:8080")
+	fmt.Printf("Starting AI RPG server with %s provider on http://localhost:%d\n", 
+		aiService.GetProviderName(), cfg.Server.Port)
 	fmt.Println("API Endpoints:")
 	fmt.Println("  POST /api/session/create - Create new session")
-	fmt.Println("  POST /api/game/action - Execute game action")
+	fmt.Println("  POST /api/game/action - Execute game action with AI GM")
 	fmt.Println("  GET  /api/game/status/:session_id - Get game status")
 	fmt.Println("  GET  /api/ai/prompt/:session_id - Get AI prompt")
 	fmt.Println("  GET  /api/metrics - Get system metrics")
 
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(cfg.GetServerAddress(), nil))
 }
 
 func (s *GameServer) handleCreateSession(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +221,17 @@ func (s *GameServer) handleMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	metrics := s.contextMgr.GetContextMetrics()
+	contextMetrics := s.contextMgr.GetContextMetrics()
+	aiMetrics := s.aiService.GetStats()
+	
+	metrics := map[string]interface{}{
+		"context": contextMetrics,
+		"ai":      aiMetrics,
+		"server": map[string]interface{}{
+			"uptime": time.Since(time.Now()).String(), // This would be calculated from start time
+			"ai_provider": s.aiService.GetProviderName(),
+		},
+	}
 	
 	response := GameResponse{
 		Success: true,
@@ -417,48 +463,43 @@ func (s *GameServer) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *GameServer) processGameCommand(sessionID, command string) (GameResponse, error) {
-	// Simple command processing logic
-	// In a real game, this would be much more sophisticated
-	
+	// Get current context
 	ctx, err := s.contextMgr.GetContext(sessionID)
 	if err != nil {
 		return GameResponse{}, fmt.Errorf("session not found")
 	}
 
-	var actionType, target, outcome string
+	// Determine action type and basic processing
+	var actionType, target string
 	var consequences []string
 
 	switch {
 	case command == "/look around" || command == "/look":
 		actionType = "examine"
 		target = "environment"
-		outcome = fmt.Sprintf("You observe your surroundings in %s. The area is filled with interesting details.", ctx.Location.Current)
 		consequences = []string{"exploration_success"}
 
 	case command == "/talk tavern_keeper":
 		actionType = "social"
 		target = "tavern_keeper"
-		outcome = "The tavern keeper greets you warmly and offers information about local happenings."
 		consequences = []string{"social_success", "npc_noticed"}
 		
-		// Update NPC relationship
+		// Update NPC relationship for social interactions
 		s.contextMgr.UpdateNPCRelationship(sessionID, "tavern_keeper", "Marcus the Tavern Keeper", 5, 
 			[]string{"friendly_conversation", "willing_to_help"})
 
 	case command == "/attack goblin":
 		actionType = "combat"
 		target = "goblin"
-		outcome = "You successfully defeat the goblin! You gain experience and reputation."
 		consequences = []string{"combat_success", "reputation_increase"}
 		
-		// Apply consequences
+		// Apply combat consequences
 		s.contextMgr.UpdateReputation(sessionID, 10)
 		s.contextMgr.UpdateCharacterHealth(sessionID, -2) // Small damage taken
 
 	case command == "/move forest" || command == "/go forest":
 		actionType = "move"
 		target = "forest"
-		outcome = "You travel to the nearby forest. Tall trees surround you."
 		consequences = []string{"location_change"}
 		
 		// Update location
@@ -467,26 +508,38 @@ func (s *GameServer) processGameCommand(sessionID, command string) (GameResponse
 	case command == "/examine chest" || command == "/search chest":
 		actionType = "examine"
 		target = "chest"
-		outcome = "You find a valuable item in the chest! A magical ring is now in your inventory."
 		consequences = []string{"item_gained", "exploration_success"}
 
 	case command == "/inventory" || command == "/inv":
 		actionType = "examine"
 		target = "inventory"
-		outcome = fmt.Sprintf("Health: %d/%d, Reputation: %d, Location: %s", 
-			ctx.Character.Health.Current, ctx.Character.Health.Max, 
-			ctx.Character.Reputation, ctx.Location.Current)
 		consequences = []string{}
 
 	default:
 		actionType = "unknown"
 		target = "unknown"
-		outcome = "You try something, but nothing obvious happens. Try commands like /look, /talk tavern_keeper, /attack goblin, /move forest"
 		consequences = []string{}
 	}
 
-	// Record the action
-	err = s.contextMgr.RecordAction(sessionID, command, actionType, target, ctx.Location.Current, outcome, consequences)
+	// Generate AI response using context
+	prompt, err := s.contextMgr.GenerateAIPrompt(sessionID)
+	if err != nil {
+		return GameResponse{}, fmt.Errorf("failed to generate AI prompt: %v", err)
+	}
+
+	// Add the player's current command to the prompt
+	fullPrompt := fmt.Sprintf("%s\n\nPlayer Action: %s\n\nAs the Game Master, respond to this player action with an engaging, contextual response that moves the story forward.", prompt, command)
+
+	// Get AI response
+	aiResponse, err := s.aiService.GenerateGMResponse(fullPrompt)
+	if err != nil {
+		log.Printf("AI service error: %v", err)
+		// Fallback to a generic response if AI fails
+		aiResponse = fmt.Sprintf("You attempt to %s. The world responds to your action, though the details are unclear at this moment.", command)
+	}
+
+	// Record the action with AI-generated outcome
+	err = s.contextMgr.RecordAction(sessionID, command, actionType, target, ctx.Location.Current, aiResponse, consequences)
 	if err != nil {
 		return GameResponse{}, fmt.Errorf("failed to record action: %v", err)
 	}
@@ -499,13 +552,14 @@ func (s *GameServer) processGameCommand(sessionID, command string) (GameResponse
 
 	return GameResponse{
 		Success: true,
-		Message: outcome,
+		Message: aiResponse,
 		Context: map[string]interface{}{
 			"location":    summary.CurrentLocation,
 			"health":      summary.PlayerHealth,
 			"reputation":  summary.PlayerReputation,
 			"mood":        summary.PlayerMood,
 			"session_time": fmt.Sprintf("%.1f minutes", summary.SessionDuration),
+			"ai_provider": s.aiService.GetProviderName(),
 		},
 	}, nil
 }
