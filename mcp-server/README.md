@@ -141,18 +141,50 @@ MCP Server
 
 ## Integration with Claude Desktop
 
-Add to your Claude Desktop configuration:
+### Configuration
+1. Open Claude Desktop and navigate to the settings.
+2. Locate the MCP server configuration section.
+3. Add the following configuration:
+   ```json
+   {
+     "mcpServers": {
+       "ai-rpg": {
+         "command": "/path/to/ai-rpg-mcp-server",
+         "args": []
+       }
+     }
+   }
+   ```
+4. Replace `/path/to/ai-rpg-mcp-server` with the actual path to your MCP server executable.
+5. Save the configuration and restart Claude Desktop.
 
-```json
-{
-  "mcpServers": {
-    "ai-rpg": {
-      "command": "/path/to/ai-rpg-mcp-server",
-      "args": []
-    }
-  }
-}
-```
+### Interacting with Claude MCP
+You can interact with the MCP server using natural language queries. Here are some practical examples:
+
+#### Example 1: Creating a Session
+- **Query**: "Create a new session for player 'Aragorn'."
+- **Response**: The MCP server will create a new session and return a session ID.
+
+#### Example 2: Executing an Action
+- **Query**: "Execute the command '/look around' in session 'session-uuid-here'."
+- **Response**: The MCP server will execute the command and return the AI-generated response.
+
+#### Example 3: Getting Session Status
+- **Query**: "What is the current status of session 'session-uuid-here'?"
+- **Response**: The MCP server will return the current session context and state.
+
+#### Example 4: Updating Location
+- **Query**: "Move the player to the 'forest' location in session 'session-uuid-here'."
+- **Response**: The MCP server will update the player's location and return a confirmation.
+
+#### Example 5: Updating NPC Relationship
+- **Query**: "Update the relationship with 'tavern_keeper' to 'friendly' in session 'session-uuid-here'."
+- **Response**: The MCP server will update the NPC relationship and return a confirmation.
+
+### Additional Tips
+- Ensure that the MCP server is running before sending queries.
+- Use clear and specific queries to get accurate responses.
+- Check the MCP server logs for any errors or issues.
 
 ## Development
 
