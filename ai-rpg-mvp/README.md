@@ -71,7 +71,39 @@ contextMgr.UpdateNPCRelationship(sessionID, "tavern_keeper", "Marcus", 10,
 prompt, err := contextMgr.GenerateAIPrompt(sessionID)
 ```
 
-### 2. Claude AI Integration
+### 2. Starting the Project
+
+#### Game Server
+1. Navigate to the `ai-rpg-mvp` directory:
+   ```bash
+   cd ai-rpg-mvp
+   ```
+2. Copy the example environment file and update it with your settings:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your API keys and configuration
+   ```
+3. Run the game server:
+   ```bash
+   make run
+   ```
+
+#### MCP Server
+1. Navigate to the `mcp-server` directory:
+   ```bash
+   cd mcp-server
+   ```
+2. Copy the example environment file and update it with your settings:
+   ```bash
+   cp .env.example .env
+   # Edit .env and add your API keys and configuration
+   ```
+3. Run the MCP server:
+   ```bash
+   make run
+   ```
+
+### 3. Claude AI Integration
 
 ```bash
 # Set up your Claude API key
@@ -100,7 +132,7 @@ been keeping this place running for nigh on twenty years. What brings you to our
 humble village?" His eyes briefly flick to your travel-worn gear with keen interest.
 ```
 
-### 3. Database Setup (Production)
+### 4. Database Setup (Production)
 
 ```go
 // Use PostgreSQL for production
@@ -232,127 +264,3 @@ summary, err := contextMgr.GetContextSummary(sessionID)
 // - Active NPC relationships and dispositions
 // - Session statistics and player behavior patterns
 ```
-
-## Example Scenarios
-
-### 1. Combat Encounter
-```go
-// Player attacks goblin
-contextMgr.RecordAction(sessionID, "/attack goblin", "combat", "goblin", 
-    "forest", "You strike for 8 damage!", 
-    []string{"combat_success", "health_damage", "reputation_increase"})
-
-// Automatic consequence processing:
-// - Player reputation increases (+5)
-// - Player takes damage (-2 health)
-// - Combat statistics updated
-```
-
-### 2. NPC Interaction
-```go
-// Player talks to merchant
-contextMgr.UpdateNPCRelationship(sessionID, "merchant_tom", "Tom the Merchant", 
-    10, []string{"bought_items", "regular_customer"})
-
-// AI prompt will include:
-// "Tom the Merchant: friendly mood, ally relationship
-//  - Knows: bought_items, regular_customer
-//  - Last interaction: 2 minutes ago"
-```
-
-### 3. Location Exploration
-```go
-// Player moves to new area
-contextMgr.UpdateLocation(sessionID, "ancient_ruins")
-contextMgr.RecordAction(sessionID, "/examine altar", "explore", "altar",
-    "ancient_ruins", "You find mysterious runes carved into the stone",
-    []string{"exploration_success", "lore_discovered"})
-
-// Tracks: visit count, time spent, exploration history
-```
-
-## API Endpoints
-
-The web server example provides a complete REST API:
-
-- `POST /api/session/create` - Create new player session
-- `POST /api/game/action` - Execute game action
-- `GET /api/game/status` - Get current game status
-- `GET /api/ai/prompt` - Generate AI prompt with context
-- `GET /api/metrics` - System performance metrics
-
-## Configuration
-
-### Context Manager Settings
-```go
-contextMgr := context.NewContextManager(storage)
-// Customize settings:
-// - maxActions: Number of actions to keep in history (default: 50)
-// - cacheTimeout: How long to keep contexts in memory (default: 30min)
-// - persistInterval: How often to save to database (default: 5min)
-```
-
-### Storage Options
-```go
-// Development: In-memory storage
-storage := context.NewMemoryStorage()
-
-// Production: PostgreSQL storage
-storage, err := context.NewPostgreSQLStorage(connectionString)
-```
-
-## Performance Metrics
-
-The system provides comprehensive metrics:
-- Active sessions count
-- Cache hit rate
-- Event queue size
-- Average context size
-- Background processing stats
-
-Target Performance:
-- **Context Retrieval**: <50ms
-- **Memory Usage**: <1MB per session
-- **Cache Hit Rate**: >90%
-- **Event Processing**: Non-blocking
-
-## Use Cases
-
-### 1. AI Game Master
-```go
-// Generate contextual GM responses
-prompt, _ := contextMgr.GenerateAIPrompt(sessionID)
-gmResponse := callAIService(prompt)
-```
-
-### 2. Dynamic NPCs
-```go
-// NPCs react based on relationship history
-npcContext := contextMgr.GetNPCRelationship(sessionID, "blacksmith")
-if npcContext.Disposition > 50 {
-    return "Welcome back, my friend! I have something special for you."
-}
-```
-
-### 3. Persistent World
-```go
-// World events based on player actions
-if ctx.Character.Reputation < -50 {
-    // Trigger consequence events
-    contextMgr.RecordAction(sessionID, "reputation_consequence", "event", 
-        "village", "Guards approach you suspiciously", []string{"social_penalty"})
-}
-```
-
-## Next Steps
-
-This context tracking system provides the foundation for:
-1. **Phase 2**: Evolving AI agents that learn and adapt
-2. **Phase 3**: Web3 integration with persistent NFT assets  
-3. **Phase 4**: AI-generated visual content based on context
-
-The system is designed to scale and support the advanced AI agent behaviors described in your MVP roadmap.
-
-## License
-
-This project is part of the AI RPG MVP development roadmap.
